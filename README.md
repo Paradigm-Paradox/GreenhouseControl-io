@@ -1,5 +1,9 @@
 # GreenhouseControl-io
 
+<p align="center">
+  <img src="logo.png" alt="GreenhouseControl-io Logo" width="220" style="border-radius: 20px;">
+</p>
+
 [![Home Assistant Add-on](https://img.shields.io/badge/Home%20Assistant-Add--on-blue.svg)](https://www.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
