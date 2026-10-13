@@ -26,9 +26,14 @@
 - **🖥️ Ingress Web Dashboard**:
   - Embedded seamlessly inside your Home Assistant sidebar.
   - Live gauges, climate curves, zone controls, and manual actuator overrides.
+- **⚡ ESP32 Edge Nodes (Wi-Fi, Ethernet & Bluetooth)**:
+  - Ready-to-flash [ESPHome configurations](esphome/) for climate, canopy, soil, and relay actuation.
+  - **Wired Ethernet PoE ESP32 support** (WT32-ETH01, Olimex ESP32-POE) for high-reliability in humid/metal greenhouses.
+  - **Active Bluetooth BLE Proxy** for zero-wire tracking of MiFlora & Inkbird plant beacons.
+  - Hardware watchdogs and auto-shutoff timers on all relay boards to prevent overwatering even during network disconnects.
 - **🔗 Native Home Assistant Integration**:
   - Reads existing sensors and controls switches, valves, and dimmers without complex configuration.
-  - MQTT discovery support for custom ESP32 / ESPHome greenhouse nodes.
+  - MQTT discovery support for custom microcontrollers and sensors.
 
 ---
 

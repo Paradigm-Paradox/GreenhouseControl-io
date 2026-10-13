@@ -1,0 +1,104 @@
+substitutions:
+  name: "greenhouse-canopy-node"
+  friendly_name: "Greenhouse Canopy Sensor Node"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Native Home Assistant API for instant encrypted communication
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: "!secret wifi_ssid"
+  password: "!secret wifi_password"
+  ap:
+    ssid: "Greenhouse-Canopy-Fallback"
+
+captive_portal:
+
+# I2C Bus for environmental sensors
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  id: bus_a
+
+sensor:
+  # 1. High-precision Air Temperature & Relative Humidity (SHT40)
+  - platform: sht4x
+    temperature:
+      name: "Greenhouse Air Temperature"
+      id: air_temp
+    humidity:
+      name: "Greenhouse Air Humidity"
+      id: air_humidity
+    address: 0x44
+    update_interval: 10s
+
+  # 2. Non-Contact Infrared Leaf Canopy Temperature (MLX90614)
+  - platform: mlx90614
+    ambient:
+      name: "MLX Ambient Sensor Temp"
+    object:
+      name: "Greenhouse Leaf Canopy Temperature"
+      id: leaf_temp
+    address: 0x5A
+    update_interval: 10s
+
+  # 3. Ambient Light Sensor (BH1750) for DLI tracking
+  - platform: bh1750
+    name: "Greenhouse Solar Illuminance"
+    id: solar_lux
+    address: 0x23
+    update_interval: 10s
+
+  # 4. CO2 Concentration (SCD40 NDIR)
+  - platform: scd4x
+    co2:
+      name: "Greenhouse CO2 Concentration"
+      id: co2_ppm
+    temperature:
+      name: "SCD40 Temp"
+    humidity:
+      name: "SCD40 Humidity"
+    address: 0x62
+    update_interval: 30s
+
+  # 5. Onboard Computed Leaf Vapor Pressure Deficit (VPD)
+  - platform: template
+    name: "Greenhouse Leaf VPD"
+    id: onboard_leaf_vpd
+    unit_of_measurement: "kPa"
+    accuracy_decimals: 2
+    update_interval: 10s
+    lambda: |-
+      if (id(air_temp).has_state() && id(air_humidity).has_state() && id(leaf_temp).has_state()) {
+        float T_air = id(air_temp).state;
+        float RH = id(air_humidity).state;
+        float T_leaf = id(leaf_temp).state;
+
+        // Saturation vapor pressure of air and leaf (Tetens equation in kPa)
+        float vp_sat_leaf = 0.61078 * exp((17.27 * T_leaf) / (T_leaf + 237.3));
+        float vp_sat_air = 0.61078 * exp((17.27 * T_air) / (T_air + 237.3));
+        float vp_air = vp_sat_air * (RH / 100.0);
+
+        float vpd = vp_sat_leaf - vp_air;
+        return (vpd > 0.0) ? vpd : 0.0;
+      }
+      return {};
+
+# Status LED
+status_led:
+  pin: GPIO2

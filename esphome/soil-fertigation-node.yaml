@@ -1,0 +1,103 @@
+substitutions:
+  name: "greenhouse-soil-node"
+  friendly_name: "Greenhouse Soil & Reservoir Node"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: "!secret wifi_ssid"
+  password: "!secret wifi_password"
+
+# UART bus for RS485 Transceiver (MAX485 / TTL-to-RS485)
+uart:
+  id: modbus_uart
+  tx_pin: GPIO17
+  rx_pin: GPIO16
+  baud_rate: 9600
+  stop_bits: 1
+
+# Modbus controller for industrial 7-in-1 / 3-in-1 Soil Sensor
+modbus:
+  id: modbus_soil
+  uart_id: modbus_uart
+
+modbus_controller:
+  - id: soil_sensor
+    address: 0x01
+    modbus_id: modbus_soil
+    setup_priority: -10
+
+# 1-Wire Bus for waterproof DS18B20 water temperature probe
+one_wire:
+  - platform: gpio
+    pin: GPIO4
+    id: onewire_bus
+
+sensor:
+  # 1. Industrial Modbus RS485 Soil Moisture
+  - platform: modbus_controller
+    modbus_controller_id: soil_sensor
+    name: "Soil Volumetric Water Content"
+    id: soil_moisture
+    address: 0x0000
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    unit_of_measurement: "%"
+    filters:
+      - multiply: 0.1
+
+  # 2. Soil Temperature
+  - platform: modbus_controller
+    modbus_controller_id: soil_sensor
+    name: "Soil Temperature"
+    address: 0x0001
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    unit_of_measurement: "°C"
+    filters:
+      - multiply: 0.1
+
+  # 3. Soil Electrical Conductivity (EC / Salinity)
+  - platform: modbus_controller
+    modbus_controller_id: soil_sensor
+    name: "Soil Electrical Conductivity"
+    address: 0x0002
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "µS/cm"
+
+  # 4. Reservoir Water Temperature (DS18B20)
+  - platform: dallas_temp
+    one_wire_id: onewire_bus
+    name: "Irrigation Reservoir Water Temp"
+    update_interval: 15s
+
+  # 5. Reservoir Tank Water Level (Waterproof Ultrasonic Sensor JSN-SR04T)
+  - platform: ultrasonic
+    trigger_pin: GPIO18
+    echo_pin: GPIO19
+    name: "Irrigation Tank Water Level Distance"
+    unit_of_measurement: "cm"
+    accuracy_decimals: 1
+    update_interval: 10s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 2

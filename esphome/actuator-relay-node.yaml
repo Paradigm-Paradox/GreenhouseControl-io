@@ -1,0 +1,103 @@
+substitutions:
+  name: "greenhouse-actuators"
+  friendly_name: "Greenhouse Actuator & Relay Controller"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+
+ota:
+  - platform: esphome
+
+# Wired Ethernet Configuration (WT32-ETH01 / LAN8720 standard)
+# Guarantees zero Wi-Fi packet drops in wet / metal-framed greenhouses
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO16
+
+# Outputs & Relays with Hardware Watchdog Cutoffs
+switch:
+  # Actuator 1: Main Exhaust Fan
+  - platform: gpio
+    name: "Greenhouse Exhaust Fan"
+    pin: GPIO2
+    id: exhaust_fan
+
+  # Actuator 2: Circulation Air Fan
+  - platform: gpio
+    name: "Greenhouse Circulation Fan"
+    pin: GPIO4
+    id: circulation_fan
+
+  # Actuator 3: Greenhouse Heating
+  - platform: gpio
+    name: "Greenhouse Heating Contactor"
+    pin: GPIO12
+    id: heater_contactor
+
+  # Actuator 4: High-Pressure Misting / Humidifier
+  - platform: gpio
+    name: "Greenhouse Misting Pump"
+    pin: GPIO14
+    id: misting_pump
+    # Hardware watchdog: Misting automatically shuts off after 60s max
+    on_turn_on:
+      - delay: 60s
+      - switch.turn_off: misting_pump
+
+  # Actuator 5: Automated Ridge / Louver Vent Motor
+  - platform: gpio
+    name: "Greenhouse Ridge Vent Open"
+    pin: GPIO15
+    id: vent_motor_open
+    interlocks: [vent_motor_close]
+
+  - platform: gpio
+    name: "Greenhouse Ridge Vent Close"
+    pin: GPIO13
+    id: vent_motor_close
+    interlocks: [vent_motor_open]
+
+  # Actuator 6: Irrigation Solenoid Valve Zone 1 (24VAC)
+  - platform: gpio
+    name: "Irrigation Zone 1 Valve"
+    pin: GPIO25
+    id: irrig_zone_1
+    # Safety Watchdog: Hard limit prevents accidental flooding
+    on_turn_on:
+      - delay: 180s
+      - switch.turn_off: irrig_zone_1
+
+  # Actuator 7: Irrigation Solenoid Valve Zone 2 (24VAC)
+  - platform: gpio
+    name: "Irrigation Zone 2 Valve"
+    pin: GPIO26
+    id: irrig_zone_2
+    on_turn_on:
+      - delay: 180s
+      - switch.turn_off: irrig_zone_2
+
+# 0-10V or PWM Grow Light Dimming
+output:
+  - platform: ledc
+    pin: GPIO32
+    id: light_dimmer_pwm
+    frequency: 1000Hz
+
+light:
+  - platform: monochromatic
+    output: light_dimmer_pwm
+    name: "Greenhouse Supplemental Lighting Dimmer"
